@@ -6,7 +6,44 @@ const STORAGE_KEYS = {
     PROGRESS: 'stem_lab_progress',
     REPORTS: 'stem_lab_reports',
     ACHIEVEMENTS: 'stem_lab_user_achievements',
+    INITIALIZED: 'stem_lab_initialized',
 };
+
+// Demo accounts
+const DEMO_ACCOUNTS: User[] = [
+    {
+        id: 'demo_teacher_001',
+        email: 'giaovien@demo.com',
+        full_name: 'Nguyễn Văn Thầy',
+        role: 'admin',
+        created_at: '2024-01-01T00:00:00Z',
+    },
+    {
+        id: 'demo_student_001',
+        email: 'hocsinh@demo.com',
+        full_name: 'Trần Thị Học Sinh',
+        role: 'student',
+        created_at: '2024-01-01T00:00:00Z',
+    },
+];
+
+// Initialize demo accounts if not exists
+export function initDemoAccounts(): void {
+    const initialized = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
+    if (!initialized) {
+        const existingUsers = getAllUsers();
+        const newUsers = [...existingUsers];
+
+        DEMO_ACCOUNTS.forEach(demo => {
+            if (!existingUsers.find(u => u.email === demo.email)) {
+                newUsers.push(demo);
+            }
+        });
+
+        saveAllUsers(newUsers);
+        localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+    }
+}
 
 // User Storage
 export function saveUser(user: User): void {

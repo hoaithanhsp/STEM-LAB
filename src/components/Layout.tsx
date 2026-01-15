@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Beaker, User } from 'lucide-react';
+import { Home, Beaker, User, Sparkles } from 'lucide-react';
 
 interface LayoutProps {
     children: ReactNode;
@@ -11,6 +11,7 @@ interface LayoutProps {
 export default function Layout({ children, hideNav = false }: LayoutProps) {
     const { user } = useAuth();
     const location = useLocation();
+    const isAdmin = user?.role === 'admin';
 
     const navItems = [
         { path: '/library', label: 'Thư viện', icon: Beaker },
@@ -36,13 +37,13 @@ export default function Layout({ children, hideNav = false }: LayoutProps) {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex flex-col items-center py-2 px-4 rounded-xl transition-all ${isActive(item.path)
-                                        ? 'text-primary-600'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                    ? 'text-primary-600'
+                                    : 'text-gray-500 hover:text-gray-700'
                                     }`}
                             >
                                 <div className={`p-2 rounded-xl transition-all ${isActive(item.path)
-                                        ? 'bg-primary-100'
-                                        : 'hover:bg-gray-100'
+                                    ? 'bg-primary-100'
+                                    : 'hover:bg-gray-100'
                                     }`}>
                                     <item.icon className={`w-6 h-6 ${isActive(item.path) ? 'text-primary-600' : ''
                                         }`} />
@@ -80,14 +81,28 @@ export default function Layout({ children, hideNav = false }: LayoutProps) {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive(item.path)
-                                        ? 'bg-primary-50 text-primary-600'
-                                        : 'text-gray-600 hover:bg-gray-50'
+                                    ? 'bg-primary-50 text-primary-600'
+                                    : 'text-gray-600 hover:bg-gray-50'
                                     }`}
                             >
                                 <item.icon className="w-5 h-5" />
                                 <span className="font-medium">{item.label}</span>
                             </Link>
                         ))}
+
+                        {/* Create Experiment - Admin Only */}
+                        {isAdmin && (
+                            <Link
+                                to="/create"
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all mt-4 ${isActive('/create')
+                                    ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white'
+                                    : 'bg-gradient-to-r from-primary-50 to-secondary-50 text-primary-600 hover:from-primary-100 hover:to-secondary-100'
+                                    }`}
+                            >
+                                <Sparkles className="w-5 h-5" />
+                                <span className="font-medium">Tạo thí nghiệm AI</span>
+                            </Link>
+                        )}
                     </div>
 
                     {/* User Info */}

@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Library from './pages/Library';
 import ExperimentDetail from './pages/ExperimentDetail';
 import Profile from './pages/Profile';
+import CreateExperiment from './pages/CreateExperiment';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { user, isLoading } = useAuth();
@@ -33,6 +34,7 @@ function AppRoutes() {
             <Route path="/library" element={<PrivateRoute><Library /></PrivateRoute>} />
             <Route path="/experiment/:id" element={<PrivateRoute><ExperimentDetail /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="/create" element={<PrivateRoute><CreateExperiment /></PrivateRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
     );
