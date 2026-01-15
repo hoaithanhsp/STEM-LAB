@@ -1,4 +1,12 @@
 const API_KEY_STORAGE = 'stem_lab_gemini_key';
+const SELECTED_MODEL_STORAGE = 'stem_lab_selected_model';
+
+// Danh sách các model Gemini theo thứ tự ưu tiên
+export const GEMINI_MODELS = [
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', description: 'Nhanh nhất, phù hợp cho hầu hết tác vụ', isDefault: true },
+    { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro Preview', description: 'Mạnh mẽ hơn, cho tác vụ phức tạp', isDefault: false },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Ổn định, dự phòng khi các model khác quá tải', isDefault: false }
+];
 
 export function getApiKey(): string | null {
     return localStorage.getItem(API_KEY_STORAGE);
@@ -10,6 +18,14 @@ export function setApiKey(key: string): void {
 
 export function removeApiKey(): void {
     localStorage.removeItem(API_KEY_STORAGE);
+}
+
+export function getSelectedModel(): string {
+    return localStorage.getItem(SELECTED_MODEL_STORAGE) || GEMINI_MODELS[0].id;
+}
+
+export function setSelectedModel(modelId: string): void {
+    localStorage.setItem(SELECTED_MODEL_STORAGE, modelId);
 }
 
 export interface GeneratedExperiment {
@@ -36,6 +52,102 @@ export interface GeneratedExperiment {
         outputUnit: string;
         formula: string;
     }[];
+}
+
+// Hàm kiểm tra lỗi quota/rate limit
+function isQuotaError(errorMessage: string): boolean {
+    const quotaKeywords = ['quota', 'exceeded', 'rate limit', 'resource_exhausted', '429', '503'];
+    const lowerMessage = errorMessage.toLowerCase();
+    return quotaKeywords.some(keyword => lowerMessage.includes(keyword));
+}
+
+// Hàm gọi API với cơ chế fallback tự động
+async function callGeminiAPIWithFallback(
+    apiKey: string,
+    body: object,
+    startModelIndex = 0
+): Promise<{ response: Response; usedModel: string }> {
+    const modelOrder = getModelFallbackOrder();
+
+    for (let i = startModelIndex; i < modelOrder.length; i++) {
+        const model = modelOrder[i];
+        console.log(`🔄 Đang thử model: ${model}`);
+
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            // Nếu gặp lỗi quota (429, 503), thử model tiếp theo
+            if (response.status === 429 || response.status === 503) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
+                console.log(`⚠️ Model ${model} bị lỗi: ${errorMessage}`);
+
+                if (i < modelOrder.length - 1) {
+                    console.log(`➡️ Chuyển sang model tiếp theo...`);
+                    continue;
+                }
+                // Nếu là model cuối cùng, throw error
+                throw new Error(`${response.status} RESOURCE_EXHAUSTED: ${errorMessage}`);
+            }
+
+            // Kiểm tra các lỗi khác
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || `API Error: ${response.status}`;
+
+                // Nếu lỗi quota trong message, thử model tiếp theo
+                if (isQuotaError(errorMessage) && i < modelOrder.length - 1) {
+                    console.log(`⚠️ Model ${model} quota exceeded: ${errorMessage}`);
+                    continue;
+                }
+
+                // Lỗi khác (invalid key, etc.)
+                if (response.status === 400 || response.status === 403) {
+                    throw new Error('API_KEY_INVALID');
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            console.log(`✅ Thành công với model: ${model}`);
+            return { response, usedModel: model };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            // Nếu lỗi mạng hoặc quota, thử model tiếp theo
+            if (isQuotaError(errorMessage) && i < modelOrder.length - 1) {
+                console.log(`⚠️ Lỗi với model ${model}: ${errorMessage}`);
+                continue;
+            }
+
+            // Nếu là model cuối hoặc lỗi khác, throw error
+            throw error;
+        }
+    }
+
+    throw new Error('QUOTA_EXCEEDED_ALL_MODELS: Tất cả các model đều đã hết quota. Vui lòng thử lại sau hoặc sử dụng API key khác.');
+}
+
+// Lấy thứ tự model fallback (bắt đầu từ model được chọn)
+function getModelFallbackOrder(): string[] {
+    const selectedModel = getSelectedModel();
+    const modelIds = GEMINI_MODELS.map(m => m.id);
+    const selectedIndex = modelIds.indexOf(selectedModel);
+
+    if (selectedIndex === -1) return modelIds;
+
+    // Đặt model được chọn lên đầu, các model còn lại theo thứ tự
+    return [
+        selectedModel,
+        ...modelIds.filter(id => id !== selectedModel)
+    ];
 }
 
 export async function analyzeAndGenerateExperiment(
@@ -84,30 +196,15 @@ Trả về JSON với cấu trúc sau (chỉ trả về JSON, không giải thí
 }`;
 
     try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{ text: prompt }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 2048,
-                    }
-                })
+        const { response } = await callGeminiAPIWithFallback(apiKey, {
+            contents: [{
+                parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
             }
-        );
-
-        if (!response.ok) {
-            const error = await response.json();
-            if (response.status === 400 || response.status === 403) {
-                throw new Error('API_KEY_INVALID');
-            }
-            throw new Error(error.error?.message || 'API Error');
-        }
+        });
 
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -170,34 +267,23 @@ Trả về JSON với cấu trúc sau (chỉ trả về JSON, không giải thí
 }`;
 
     try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            {
-                                inline_data: {
-                                    mime_type: 'image/jpeg',
-                                    data: imageBase64
-                                }
-                            }
-                        ]
-                    }],
-                    generationConfig: {
-                        temperature: 0.7,
-                        maxOutputTokens: 2048,
+        const { response } = await callGeminiAPIWithFallback(apiKey, {
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    {
+                        inline_data: {
+                            mime_type: 'image/jpeg',
+                            data: imageBase64
+                        }
                     }
-                })
+                ]
+            }],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
             }
-        );
-
-        if (!response.ok) {
-            throw new Error('API Error');
-        }
+        });
 
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
