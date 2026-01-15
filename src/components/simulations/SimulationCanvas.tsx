@@ -141,7 +141,7 @@ function OhmLawSimulation({ params, frame }: { params: Record<string, number>; f
 }
 
 // ============= ACID BASE SIMULATION =============
-function AcidBaseSimulation({ params, frame }: { params: Record<string, number>; frame: number }) {
+function AcidBaseSimulation({ params, frame: _frame }: { params: Record<string, number>; frame: number }) {
     const acidConc = params.acidConc || 1;
     const baseConc = params.baseConc || 1;
     const acidVol = params.acidVolume || 50;
@@ -500,7 +500,7 @@ function RefractionSimulation({ params }: { params: Record<string, number> }) {
 }
 
 // ============= ELECTROLYSIS SIMULATION =============
-function ElectrolysisSimulation({ params, frame }: { params: Record<string, number>; frame: number }) {
+function ElectrolysisSimulation({ params, frame: _frame }: { params: Record<string, number>; frame: number }) {
     const current = params.current || 1;
     const time = params.time || 30;
     const bubbleSpeed = current * 2;
