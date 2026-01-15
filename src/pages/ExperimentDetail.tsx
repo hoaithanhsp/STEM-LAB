@@ -12,7 +12,7 @@ import SimulationCanvas from '../components/simulations/SimulationCanvas';
 import Layout from '../components/Layout';
 import {
     ArrowLeft, Heart, Share2, Clock, RotateCcw, Play,
-    Beaker, FileText, Target, Wrench, BookOpen, X, Sparkles
+    Beaker, BookOpen, X, Sparkles
 } from 'lucide-react';
 
 export default function ExperimentDetail() {

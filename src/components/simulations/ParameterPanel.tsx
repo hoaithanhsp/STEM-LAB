@@ -1,4 +1,4 @@
-import { SimulationParameter } from '../hooks/useSimulation';
+import { SimulationParameter } from '../../hooks/useSimulation';
 
 interface ParameterPanelProps {
     parameters: SimulationParameter[];

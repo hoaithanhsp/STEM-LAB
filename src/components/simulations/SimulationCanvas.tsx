@@ -31,7 +31,7 @@ export default function SimulationCanvas({ experimentType, parameters, isRunning
             case 'pendulum':
                 return <PendulumSimulation params={parameters} frame={animationFrame} />;
             case 'refraction':
-                return <RefractionSimulation params={parameters} frame={animationFrame} />;
+                return <RefractionSimulation params={parameters} />;
             case 'electrolysis':
                 return <ElectrolysisSimulation params={parameters} frame={animationFrame} />;
             default:
@@ -226,7 +226,7 @@ function AcidBaseSimulation({ params, frame }: { params: Record<string, number>;
                     </motion.div>
                 </div>
                 <p className={`text-center text-xs mt-2 ${status === 'Trung hòa' ? 'text-green-400' :
-                        status === 'Axit' ? 'text-red-400' : 'text-blue-400'
+                    status === 'Axit' ? 'text-red-400' : 'text-blue-400'
                     }`}>{status}</p>
             </div>
         </div>
@@ -404,7 +404,7 @@ function PendulumSimulation({ params, frame }: { params: Record<string, number>;
 }
 
 // ============= REFRACTION SIMULATION =============
-function RefractionSimulation({ params }: { params: Record<string, number>; frame: number }) {
+function RefractionSimulation({ params }: { params: Record<string, number> }) {
     const incidentAngle = params.incidentAngle || 30;
     const n1 = params.n1 || 1;
     const n2 = params.n2 || 1.5;

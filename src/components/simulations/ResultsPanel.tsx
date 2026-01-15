@@ -1,4 +1,4 @@
-import { SimulationResult } from '../hooks/useSimulation';
+import { SimulationResult } from '../../hooks/useSimulation';
 import { CheckCircle, Zap } from 'lucide-react';
 
 interface ResultsPanelProps {

@@ -40,7 +40,7 @@ export interface GeneratedExperiment {
 
 export async function analyzeAndGenerateExperiment(
     content: string,
-    fileType: 'text' | 'image'
+    _fileType: 'text' | 'image'
 ): Promise<GeneratedExperiment> {
     const apiKey = getApiKey();
     if (!apiKey) {

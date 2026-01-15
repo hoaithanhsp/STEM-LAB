@@ -65,7 +65,7 @@ export const acidBaseSimulation: SimulationConfig = {
         const totalVolume = (acidVolume + baseVolume) / 1000;
 
         let pH: number;
-        let status: string;
+        let status: number;
 
         if (Math.abs(acidMoles - baseMoles) < 0.0001) {
             pH = 7;
