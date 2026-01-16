@@ -1,4 +1,4 @@
-import { User, StudentProgress, LabReport, UserAchievement } from '../types';
+import { User, StudentProgress, LabReport, UserAchievement, CustomExperiment } from '../types';
 
 const STORAGE_KEYS = {
     USER: 'stem_lab_user',
@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
     REPORTS: 'stem_lab_reports',
     ACHIEVEMENTS: 'stem_lab_user_achievements',
     INITIALIZED: 'stem_lab_initialized',
+    CUSTOM_EXPERIMENTS: 'stem_lab_custom_experiments',
 };
 
 // Demo accounts
@@ -147,4 +148,90 @@ export function saveUserAchievement(achievement: UserAchievement): void {
 // Generate unique ID
 export function generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// ========== Custom Experiments Storage ==========
+
+export function getAllCustomExperiments(): CustomExperiment[] {
+    const data = localStorage.getItem(STORAGE_KEYS.CUSTOM_EXPERIMENTS);
+    return data ? JSON.parse(data) : [];
+}
+
+export function getApprovedCustomExperiments(): CustomExperiment[] {
+    return getAllCustomExperiments().filter(exp => exp.status === 'approved');
+}
+
+export function getPendingCustomExperiments(): CustomExperiment[] {
+    return getAllCustomExperiments().filter(exp => exp.status === 'pending');
+}
+
+export function saveCustomExperiment(experiment: CustomExperiment): void {
+    const allExperiments = getAllCustomExperiments();
+    const existingIndex = allExperiments.findIndex(e => e.id === experiment.id);
+
+    if (existingIndex >= 0) {
+        allExperiments[existingIndex] = experiment;
+    } else {
+        allExperiments.push(experiment);
+    }
+
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_EXPERIMENTS, JSON.stringify(allExperiments));
+}
+
+export function approveCustomExperiment(experimentId: string, approvedBy: string): void {
+    const allExperiments = getAllCustomExperiments();
+    const experiment = allExperiments.find(e => e.id === experimentId);
+
+    if (experiment) {
+        experiment.status = 'approved';
+        experiment.approved_by = approvedBy;
+        experiment.approved_at = new Date().toISOString();
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_EXPERIMENTS, JSON.stringify(allExperiments));
+    }
+}
+
+// ========== Lab Reports with Approval ==========
+
+export function getPendingReports(): LabReport[] {
+    return getAllReports().filter(r => r.status === 'pending');
+}
+
+export function getApprovedReports(): LabReport[] {
+    return getAllReports().filter(r => r.status === 'approved');
+}
+
+export function approveReport(reportId: string, teacherId: string, feedback?: string): void {
+    const allReports = getAllReports();
+    const report = allReports.find(r => r.id === reportId);
+
+    if (report) {
+        report.status = 'approved';
+        report.reviewed_by = teacherId;
+        report.reviewed_at = new Date().toISOString();
+        if (feedback) report.teacher_feedback = feedback;
+        localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(allReports));
+    }
+}
+
+export function rejectReport(reportId: string, teacherId: string, feedback: string): void {
+    const allReports = getAllReports();
+    const report = allReports.find(r => r.id === reportId);
+
+    if (report) {
+        report.status = 'rejected';
+        report.reviewed_by = teacherId;
+        report.reviewed_at = new Date().toISOString();
+        report.teacher_feedback = feedback;
+        localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(allReports));
+    }
+}
+
+export function updateReport(report: LabReport): void {
+    const allReports = getAllReports();
+    const existingIndex = allReports.findIndex(r => r.id === report.id);
+
+    if (existingIndex >= 0) {
+        allReports[existingIndex] = report;
+        localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(allReports));
+    }
 }
