@@ -34,6 +34,42 @@ export interface StudentProgress {
     end_time?: string;
 }
 
+// Simulation types for dynamic visualization
+export type SimulationType =
+    | 'parabola'      // Đồ thị parabol, quỹ đạo ném xiên
+    | 'graph'         // Đồ thị hàm số tổng quát  
+    | 'linear'        // Đồ thị đường thẳng
+    | 'quadratic'     // Hàm bậc 2
+    | 'pendulum'      // Con lắc dao động
+    | 'circuit'       // Sơ đồ mạch điện
+    | 'chemistry'     // Thí nghiệm hóa học
+    | 'projectile'    // Chuyển động ném xiên
+    | 'wave'          // Sóng
+    | 'optics'        // Quang học
+    | 'default';      // Fallback
+
+export interface AxisConfig {
+    label: string;
+    min: number;
+    max: number;
+    unit?: string;
+}
+
+export interface VisualConfig {
+    xAxis?: AxisConfig;
+    yAxis?: AxisConfig;
+    curveEquation?: string;           // Phương trình đường cong
+    animationType?: 'trajectory' | 'oscillation' | 'flow' | 'static' | 'wave';
+    colors?: {
+        primary: string;
+        secondary: string;
+        background?: string;
+    };
+    showGrid?: boolean;
+    showFormula?: boolean;
+    animationSpeed?: number;          // Tốc độ animation (1-10)
+}
+
 // Custom experiment types (created by teachers via AI)
 export interface CustomExperiment {
     id: string;
@@ -52,6 +88,24 @@ export interface CustomExperiment {
     status: 'pending' | 'approved';
     approved_by?: string;
     approved_at?: string;
+    // Dynamic simulation fields
+    simulationType?: SimulationType;
+    visualConfig?: VisualConfig;
+    parameters?: {
+        id: string;
+        name: string;
+        unit: string;
+        min: number;
+        max: number;
+        step: number;
+        defaultValue: number;
+    }[];
+    formulas?: {
+        outputId: string;
+        outputName: string;
+        outputUnit: string;
+        formula: string;
+    }[];
 }
 
 // Lab report types
