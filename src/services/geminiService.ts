@@ -28,6 +28,8 @@ export function setSelectedModel(modelId: string): void {
     localStorage.setItem(SELECTED_MODEL_STORAGE, modelId);
 }
 
+import { SimulationType, VisualConfig } from '../types';
+
 export interface GeneratedExperiment {
     title: string;
     subject: string;
@@ -52,6 +54,9 @@ export interface GeneratedExperiment {
         outputUnit: string;
         formula: string;
     }[];
+    // Dynamic simulation fields
+    simulationType: SimulationType;
+    visualConfig: VisualConfig;
 }
 
 // Hàm kiểm tra lỗi quota/rate limit
@@ -159,38 +164,86 @@ export async function analyzeAndGenerateExperiment(
         throw new Error('API_KEY_REQUIRED');
     }
 
-    const prompt = `Bạn là chuyên gia giáo dục STEM. Phân tích nội dung sau và tạo một thí nghiệm mô phỏng tương tác.
+    const prompt = `Bạn là chuyên gia giáo dục STEM. Phân tích nội dung sau và tạo một thí nghiệm mô phỏng tương tác với đồ thị/animation trực quan.
 
 NỘI DUNG:
 ${content}
 
+QUAN TRỌNG: Bạn PHẢI chọn simulationType phù hợp để tạo mô phỏng trực quan:
+- "projectile": Chuyển động ném xiên, ném ngang, rơi tự do (vẽ quỹ đạo parabol)
+- "parabola": Đồ thị hàm số bậc 2 dạng y = ax² + bx + c
+- "quadratic": Khảo sát hàm bậc 2, tìm đỉnh, trục đối xứng
+- "linear": Đồ thị đường thẳng y = ax + b, phương trình bậc nhất
+- "graph": Đồ thị hàm số tổng quát khác
+- "pendulum": Con lắc đơn, dao động điều hòa
+- "circuit": Mạch điện, định luật Ohm
+- "chemistry": Phản ứng hóa học, axit-bazơ
+- "wave": Sóng cơ, sóng âm, sóng điện từ
+- "optics": Quang học, khúc xạ, phản xạ ánh sáng
+- "default": Fallback cho các thí nghiệm khác
+
 Trả về JSON với cấu trúc sau (chỉ trả về JSON, không giải thích):
 {
   "title": "Tên thí nghiệm (tiếng Việt)",
-  "subject": "Vật lý" hoặc "Hóa học" hoặc "Sinh học",
+  "subject": "Vật lý" hoặc "Hóa học" hoặc "Sinh học" hoặc "Toán",
   "difficulty_level": "Dễ" hoặc "Trung bình" hoặc "Khó",
   "short_description": "Mô tả ngắn về thí nghiệm (2-3 câu)",
   "learning_objectives": ["Mục tiêu 1", "Mục tiêu 2", "Mục tiêu 3"],
   "tools_instructions": ["Dụng cụ 1", "Dụng cụ 2", "Dụng cụ 3"],
   "simulation_config": "Công thức chính của thí nghiệm",
   "estimated_time": 30,
+  "simulationType": "projectile",
+  "visualConfig": {
+    "xAxis": { "label": "x", "min": 0, "max": 100, "unit": "m" },
+    "yAxis": { "label": "y", "min": 0, "max": 50, "unit": "m" },
+    "curveEquation": "y = x * tan(theta) - (g * x^2) / (2 * v0^2 * cos(theta)^2)",
+    "animationType": "trajectory",
+    "showGrid": true,
+    "showFormula": true,
+    "animationSpeed": 5,
+    "colors": { "primary": "#3b82f6", "secondary": "#10b981" }
+  },
   "parameters": [
     {
-      "id": "param1",
-      "name": "Tên tham số",
-      "unit": "đơn vị",
-      "min": 0,
-      "max": 100,
+      "id": "v0",
+      "name": "Vận tốc đầu",
+      "unit": "m/s",
+      "min": 1,
+      "max": 50,
       "step": 1,
-      "defaultValue": 50
+      "defaultValue": 20
+    },
+    {
+      "id": "theta",
+      "name": "Góc bắn",
+      "unit": "°",
+      "min": 0,
+      "max": 90,
+      "step": 5,
+      "defaultValue": 45
+    },
+    {
+      "id": "g",
+      "name": "Gia tốc trọng trường",
+      "unit": "m/s²",
+      "min": 1,
+      "max": 20,
+      "step": 0.5,
+      "defaultValue": 9.8
     }
   ],
   "formulas": [
     {
-      "outputId": "result1",
-      "outputName": "Tên kết quả",
-      "outputUnit": "đơn vị",
-      "formula": "param1 * 2"
+      "outputId": "range",
+      "outputName": "Tầm xa",
+      "outputUnit": "m",
+      "formula": "(v0^2 * sin(2*theta)) / g"
+    },
+    {
+      "outputId": "maxHeight",
+      "outputName": "Độ cao cực đại",
+      "outputUnit": "m",
+      "formula": "(v0^2 * sin(theta)^2) / (2*g)"
     }
   ]
 }`;
@@ -233,18 +286,42 @@ export async function analyzeImage(imageBase64: string): Promise<GeneratedExperi
         throw new Error('API_KEY_REQUIRED');
     }
 
-    const prompt = `Bạn là chuyên gia giáo dục STEM. Phân tích hình ảnh này (có thể là trang sách giáo khoa, giáo án, hoặc bài tập) và tạo một thí nghiệm mô phỏng tương tác phù hợp.
+    const prompt = `Bạn là chuyên gia giáo dục STEM. Phân tích hình ảnh này (có thể là trang sách giáo khoa, giáo án, hoặc bài tập) và tạo một thí nghiệm mô phỏng tương tác với đồ thị/animation trực quan.
+
+QUAN TRỌNG: Bạn PHẢI chọn simulationType phù hợp để tạo mô phỏng trực quan:
+- "projectile": Chuyển động ném xiên, ném ngang, rơi tự do (vẽ quỹ đạo parabol)
+- "parabola": Đồ thị hàm số bậc 2 dạng y = ax² + bx + c
+- "quadratic": Khảo sát hàm bậc 2, tìm đỉnh, trục đối xứng
+- "linear": Đồ thị đường thẳng y = ax + b, phương trình bậc nhất
+- "graph": Đồ thị hàm số tổng quát khác
+- "pendulum": Con lắc đơn, dao động điều hòa
+- "circuit": Mạch điện, định luật Ohm
+- "chemistry": Phản ứng hóa học, axit-bazơ
+- "wave": Sóng cơ, sóng âm, sóng điện từ
+- "optics": Quang học, khúc xạ, phản xạ ánh sáng
+- "default": Fallback cho các thí nghiệm khác
 
 Trả về JSON với cấu trúc sau (chỉ trả về JSON, không giải thích):
 {
   "title": "Tên thí nghiệm (tiếng Việt)",
-  "subject": "Vật lý" hoặc "Hóa học" hoặc "Sinh học",
+  "subject": "Vật lý" hoặc "Hóa học" hoặc "Sinh học" hoặc "Toán",
   "difficulty_level": "Dễ" hoặc "Trung bình" hoặc "Khó",
-  "short_description": "Mô tả ngắn về thí nghiệm",
+  "short_description": "Mô tả ngắn về thí nghiệm (2-3 câu)",
   "learning_objectives": ["Mục tiêu 1", "Mục tiêu 2", "Mục tiêu 3"],
   "tools_instructions": ["Dụng cụ 1", "Dụng cụ 2", "Dụng cụ 3"],
   "simulation_config": "Công thức chính của thí nghiệm",
   "estimated_time": 30,
+  "simulationType": "projectile",
+  "visualConfig": {
+    "xAxis": { "label": "x", "min": 0, "max": 100, "unit": "m" },
+    "yAxis": { "label": "y", "min": 0, "max": 50, "unit": "m" },
+    "curveEquation": "công thức toán học",
+    "animationType": "trajectory",
+    "showGrid": true,
+    "showFormula": true,
+    "animationSpeed": 5,
+    "colors": { "primary": "#3b82f6", "secondary": "#10b981" }
+  },
   "parameters": [
     {
       "id": "param1",
@@ -261,7 +338,7 @@ Trả về JSON với cấu trúc sau (chỉ trả về JSON, không giải thí
       "outputId": "result1",
       "outputName": "Tên kết quả",
       "outputUnit": "đơn vị",
-      "formula": "param1 * 2"
+      "formula": "công thức tính toán"
     }
   ]
 }`;
