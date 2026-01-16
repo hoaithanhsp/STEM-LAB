@@ -144,6 +144,52 @@ export const mockExperiments: Experiment[] = [
         estimated_time: 60,
         thumbnail_url: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?w=400',
         created_at: '2024-01-10'
+    },
+    {
+        id: '7',
+        title: 'Đồ thị hàm số bậc hai',
+        subject: 'Toán',
+        difficulty_level: 'Trung bình',
+        short_description: 'Khảo sát và vẽ đồ thị hàm số bậc hai y = ax² + bx + c. Tìm hiểu ảnh hưởng của các hệ số đến hình dạng parabol.',
+        learning_objectives: [
+            'Hiểu khái niệm hàm số bậc hai',
+            'Xác định đỉnh, trục đối xứng của parabol',
+            'Phân tích ảnh hưởng của hệ số a, b, c',
+            'Tìm giao điểm với trục tọa độ'
+        ],
+        tools_instructions: [
+            'Hệ trục tọa độ Oxy',
+            'Thanh trượt điều chỉnh hệ số a, b, c',
+            'Bảng giá trị x, y',
+            'Công cụ vẽ đồ thị'
+        ],
+        simulation_config: 'y = ax² + bx + c\\nĐỉnh: x = -b/(2a)\\nΔ = b² - 4ac',
+        estimated_time: 35,
+        thumbnail_url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400',
+        created_at: '2024-01-09'
+    },
+    {
+        id: '8',
+        title: 'Phương trình bậc nhất một ẩn',
+        subject: 'Toán',
+        difficulty_level: 'Dễ',
+        short_description: 'Giải và biểu diễn phương trình bậc nhất ax + b = 0 trên trục số. Tìm hiểu nghiệm và điều kiện có nghiệm.',
+        learning_objectives: [
+            'Hiểu khái niệm phương trình bậc nhất',
+            'Biết cách giải phương trình ax + b = 0',
+            'Biểu diễn nghiệm trên trục số',
+            'Phân biệt các trường hợp vô nghiệm, một nghiệm, vô số nghiệm'
+        ],
+        tools_instructions: [
+            'Trục số',
+            'Thanh trượt điều chỉnh hệ số a, b',
+            'Bảng tính toán',
+            'Công cụ đánh dấu điểm'
+        ],
+        simulation_config: 'ax + b = 0\\nx = -b/a (khi a ≠ 0)',
+        estimated_time: 25,
+        thumbnail_url: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=400',
+        created_at: '2024-01-08'
     }
 ];
 
