@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,7 +7,7 @@ import * as storage from '../services/storage';
 import Layout from '../components/Layout';
 import {
     ArrowLeft, Upload, FileText, Image, Sparkles, Check, X,
-    AlertCircle, Key, Eye, EyeOff, Beaker, Loader2
+    AlertCircle, Key, Eye, EyeOff, Beaker, Loader2, Settings, ExternalLink, Zap
 } from 'lucide-react';
 
 export default function CreateExperiment() {
@@ -27,6 +27,14 @@ export default function CreateExperiment() {
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [apiKey, setApiKey] = useState(gemini.getApiKey() || '');
     const [showKey, setShowKey] = useState(false);
+    const [selectedModel, setSelectedModel] = useState(gemini.getSelectedModel());
+
+    // Check API key on mount
+    useEffect(() => {
+        if (!gemini.getApiKey()) {
+            setShowApiKeyModal(true);
+        }
+    }, []);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -87,9 +95,14 @@ export default function CreateExperiment() {
             const error = err as Error;
             if (error.message === 'API_KEY_REQUIRED' || error.message === 'API_KEY_INVALID') {
                 setShowApiKeyModal(true);
+                setError('API Key không hợp lệ hoặc đã hết hạn. Vui lòng nhập lại.');
+                setStep('upload');
+            } else if (error.message.includes('QUOTA_EXCEEDED_ALL_MODELS')) {
+                setError('⚠️ Tất cả các model AI đều đã hết quota. Vui lòng thử lại sau hoặc sử dụng API key khác.');
                 setStep('upload');
             } else {
-                setError(error.message || 'Đã xảy ra lỗi khi tạo thí nghiệm');
+                // Hiển thị nguyên văn lỗi từ API
+                setError(`❌ Lỗi API: ${error.message}`);
                 setStep('upload');
             }
         }
@@ -98,30 +111,32 @@ export default function CreateExperiment() {
     const handleSaveExperiment = () => {
         if (!generatedExperiment || !user) return;
 
-        // Get existing custom experiments
-        const customExperimentsStr = localStorage.getItem('stem_lab_custom_experiments');
-        const customExperiments = customExperimentsStr ? JSON.parse(customExperimentsStr) : [];
-
-        // Create new experiment
+        // Create new experiment with pending status
         const newExperiment = {
             id: `custom_${storage.generateId()}`,
             ...generatedExperiment,
             thumbnail_url: imagePreview || undefined,
             created_at: new Date().toISOString(),
             created_by: user.id,
+            status: 'pending' as const, // Chờ giáo viên phê duyệt
         };
 
-        customExperiments.push(newExperiment);
-        localStorage.setItem('stem_lab_custom_experiments', JSON.stringify(customExperiments));
-
+        storage.saveCustomExperiment(newExperiment);
         setStep('success');
     };
 
     const saveApiKey = () => {
         if (apiKey.trim()) {
             gemini.setApiKey(apiKey.trim());
+            gemini.setSelectedModel(selectedModel);
             setShowApiKeyModal(false);
+            setError('');
         }
+    };
+
+    const handleModelSelect = (modelId: string) => {
+        setSelectedModel(modelId);
+        gemini.setSelectedModel(modelId);
     };
 
     // Redirect if not admin
@@ -150,24 +165,31 @@ export default function CreateExperiment() {
             <div className="min-h-screen bg-gray-50 pb-24">
                 {/* Header */}
                 <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
-                    <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                        <button onClick={() => navigate(-1)} className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                                <ArrowLeft className="w-5 h-5 text-gray-600" />
-                            </div>
-                            <div>
-                                <p className="text-lg font-bold text-gray-800">Tạo Thí Nghiệm AI</p>
-                                <p className="text-xs text-gray-500">Tự động sinh mô phỏng từ giáo án</p>
-                            </div>
-                        </button>
+                    <div className="max-w-4xl mx-auto px-4 py-4">
+                        <div className="flex items-center justify-between">
+                            <button onClick={() => navigate(-1)} className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <ArrowLeft className="w-5 h-5 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="text-lg font-bold text-gray-800">Tạo Thí Nghiệm AI</p>
+                                    <p className="text-xs text-gray-500">Tự động sinh mô phỏng từ giáo án</p>
+                                </div>
+                            </button>
 
-                        <button
-                            onClick={() => setShowApiKeyModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-700 hover:bg-gray-200"
-                        >
-                            <Key className="w-4 h-4" />
-                            {gemini.getApiKey() ? 'Đổi API Key' : 'Nhập API Key'}
-                        </button>
+                            <button
+                                onClick={() => setShowApiKeyModal(true)}
+                                className="flex flex-col items-end"
+                            >
+                                <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full text-sm text-gray-700 hover:bg-gray-200">
+                                    <Settings className="w-4 h-4" />
+                                    <span>Settings (API Key)</span>
+                                </div>
+                                <span className="text-xs text-red-500 mt-1 font-medium">
+                                    {gemini.getApiKey() ? '✓ Đã có API Key' : '⚠️ Lấy API key để sử dụng app'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -186,8 +208,8 @@ export default function CreateExperiment() {
                                     <button
                                         onClick={() => setUploadType('text')}
                                         className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${uploadType === 'text'
-                                                ? 'border-primary-500 bg-primary-50 text-primary-700'
-                                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                             }`}
                                     >
                                         <FileText className="w-5 h-5" />
@@ -196,8 +218,8 @@ export default function CreateExperiment() {
                                     <button
                                         onClick={() => setUploadType('image')}
                                         className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all ${uploadType === 'image'
-                                                ? 'border-primary-500 bg-primary-50 text-primary-700'
-                                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                                            : 'border-gray-200 text-gray-600 hover:border-gray-300'
                                             }`}
                                     >
                                         <Image className="w-5 h-5" />
@@ -279,9 +301,14 @@ Trong đó: I là cường độ dòng điện (A), U là hiệu điện thế (
 
                             {/* Error */}
                             {error && (
-                                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-                                    <AlertCircle className="w-5 h-5 text-red-500" />
-                                    <p className="text-red-700 text-sm">{error}</p>
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-red-700 text-sm font-medium">Đã xảy ra lỗi</p>
+                                            <p className="text-red-600 text-sm mt-1 break-words">{error}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 
@@ -308,7 +335,8 @@ Trong đó: I là cường độ dòng điện (A), U là hiệu điện thế (
                                 <Loader2 className="w-10 h-10 text-white animate-spin" />
                             </div>
                             <h2 className="text-xl font-bold text-gray-800 mb-2">Đang phân tích và tạo mô phỏng...</h2>
-                            <p className="text-gray-500">AI đang xử lý nội dung của bạn</p>
+                            <p className="text-gray-500 mb-2">AI đang xử lý nội dung của bạn</p>
+                            <p className="text-xs text-gray-400">Sử dụng model: {gemini.getSelectedModel()}</p>
                         </motion.div>
                     )}
 
@@ -435,22 +463,22 @@ Trong đó: I là cường độ dòng điện (A), U là hiệu điện thế (
                     )}
                 </div>
 
-                {/* API Key Modal */}
+                {/* API Key & Model Settings Modal */}
                 {showApiKeyModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+                            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
                         >
-                            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                            <div className="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
-                                        <Key className="w-5 h-5 text-primary-600" />
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center">
+                                        <Settings className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-800">Gemini API Key</h3>
-                                        <p className="text-xs text-gray-500">Để sử dụng tính năng AI</p>
+                                        <h3 className="font-bold text-gray-800">Thiết lập Model & API Key</h3>
+                                        <p className="text-xs text-gray-500">Cấu hình AI cho ứng dụng</p>
                                     </div>
                                 </div>
                                 <button onClick={() => setShowApiKeyModal(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -458,36 +486,112 @@ Trong đó: I là cường độ dòng điện (A), U là hiệu điện thế (
                                 </button>
                             </div>
 
-                            <div className="p-4">
-                                <p className="text-sm text-gray-600 mb-4">
-                                    Lấy API Key miễn phí tại{' '}
-                                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary-600 underline">
-                                        Google AI Studio
-                                    </a>
-                                </p>
+                            <div className="p-4 space-y-6">
+                                {/* Model Selection */}
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-700 mb-3">Chọn Model AI</p>
+                                    <div className="space-y-3">
+                                        {gemini.GEMINI_MODELS.map((model) => (
+                                            <button
+                                                key={model.id}
+                                                onClick={() => handleModelSelect(model.id)}
+                                                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${selectedModel === model.id
+                                                    ? 'border-primary-500 bg-primary-50'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${selectedModel === model.id
+                                                            ? 'bg-primary-500 text-white'
+                                                            : 'bg-gray-100 text-gray-500'
+                                                            }`}>
+                                                            <Zap className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <p className={`font-semibold ${selectedModel === model.id ? 'text-primary-700' : 'text-gray-800'
+                                                                }`}>
+                                                                {model.name}
+                                                                {model.isDefault && (
+                                                                    <span className="ml-2 text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                                                                        Mặc định
+                                                                    </span>
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">{model.description}</p>
+                                                        </div>
+                                                    </div>
+                                                    {selectedModel === model.id && (
+                                                        <Check className="w-5 h-5 text-primary-500" />
+                                                    )}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">
+                                        💡 Nếu model được chọn hết quota, hệ thống sẽ tự động chuyển sang model khác.
+                                    </p>
+                                </div>
 
-                                <div className="relative mb-4">
-                                    <input
-                                        type={showKey ? 'text' : 'password'}
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                        placeholder="Nhập API Key..."
-                                        className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
-                                    />
-                                    <button
-                                        onClick={() => setShowKey(!showKey)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                                    >
-                                        {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
+                                {/* API Key Input */}
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-700 mb-3">Gemini API Key</p>
+
+                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+                                        <p className="text-sm text-blue-800">
+                                            📌 Lấy API Key miễn phí tại:{' '}
+                                            <a
+                                                href="https://aistudio.google.com/apikey"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 underline font-medium inline-flex items-center gap-1"
+                                            >
+                                                Google AI Studio <ExternalLink className="w-3 h-3" />
+                                            </a>
+                                        </p>
+                                        <p className="text-xs text-blue-600 mt-2">
+                                            🎥 Xem hướng dẫn chi tiết:{' '}
+                                            <a
+                                                href="https://tinyurl.com/hdsdpmTHT"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="underline font-medium"
+                                            >
+                                                https://tinyurl.com/hdsdpmTHT
+                                            </a>
+                                        </p>
+                                    </div>
+
+                                    <div className="relative">
+                                        <input
+                                            type={showKey ? 'text' : 'password'}
+                                            value={apiKey}
+                                            onChange={(e) => setApiKey(e.target.value)}
+                                            placeholder="Nhập API Key của bạn..."
+                                            className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
+                                        />
+                                        <button
+                                            onClick={() => setShowKey(!showKey)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                        >
+                                            {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button>
+                                    </div>
+
+                                    {!apiKey.trim() && (
+                                        <p className="text-xs text-red-500 mt-2 font-medium">
+                                            ⚠️ Bạn cần nhập API Key để sử dụng tính năng AI
+                                        </p>
+                                    )}
                                 </div>
 
                                 <button
                                     onClick={saveApiKey}
                                     disabled={!apiKey.trim()}
-                                    className="w-full py-3 bg-primary-500 text-white font-semibold rounded-xl disabled:opacity-50"
+                                    className="w-full py-3 bg-gradient-to-r from-primary-500 to-secondary-500 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Lưu API Key
+                                    <Key className="w-5 h-5" />
+                                    Lưu cài đặt
                                 </button>
                             </div>
                         </motion.div>
