@@ -5,9 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import * as gemini from '../services/geminiService';
 import * as storage from '../services/storage';
 import Layout from '../components/Layout';
+import DynamicSimulationCanvas from '../components/simulations/DynamicSimulationCanvas';
 import {
     ArrowLeft, Upload, FileText, Image, Sparkles, Check, X,
-    AlertCircle, Key, Eye, EyeOff, Beaker, Loader2, Settings, ExternalLink, Zap
+    AlertCircle, Key, Eye, EyeOff, Beaker, Loader2, Settings, ExternalLink, Zap, Play
 } from 'lucide-react';
 
 export default function CreateExperiment() {
@@ -370,6 +371,31 @@ Trong đó: I là cường độ dòng điện (A), U là hiệu điện thế (
                                 </div>
 
                                 <div className="p-4 space-y-4">
+                                    {/* Simulation Preview */}
+                                    {generatedExperiment.simulationType && (
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                                    <Play className="w-4 h-4 text-primary-500" />
+                                                    Xem trước Mô phỏng
+                                                </p>
+                                                <span className="px-2 py-1 bg-primary-100 text-primary-700 text-xs rounded-full">
+                                                    {generatedExperiment.simulationType}
+                                                </span>
+                                            </div>
+                                            <DynamicSimulationCanvas
+                                                simulationType={generatedExperiment.simulationType}
+                                                visualConfig={generatedExperiment.visualConfig}
+                                                parameters={generatedExperiment.parameters.reduce((acc, p) => ({
+                                                    ...acc,
+                                                    [p.id]: p.defaultValue
+                                                }), {})}
+                                                formulas={generatedExperiment.formulas}
+                                                isRunning={true}
+                                            />
+                                        </div>
+                                    )}
+
                                     <div>
                                         <p className="text-sm font-semibold text-gray-700 mb-2">Mô tả</p>
                                         <p className="text-gray-600 text-sm">{generatedExperiment.short_description}</p>
