@@ -84,6 +84,7 @@ export default function ExperimentDetail() {
             answers: {},
             created_at: new Date().toISOString(),
             saved_to_profile: false,
+            status: 'pending' as const, // Chờ giáo viên phê duyệt
         };
 
         storage.saveReport(report);
@@ -101,7 +102,7 @@ export default function ExperimentDetail() {
         storage.saveProgress(updatedProgress);
         setProgress(updatedProgress);
         setShowReportModal(false);
-        alert('Báo cáo đã được lưu thành công!');
+        alert('Báo cáo đã được gửi và đang chờ giáo viên phê duyệt!');
     };
 
     if (loading) {
