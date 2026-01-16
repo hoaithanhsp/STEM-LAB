@@ -295,7 +295,9 @@ export default function Library() {
                                                 {getStatusText(experiment.id)}
                                             </span>
                                             <Link
-                                                to={`/experiment/${experiment.id}`}
+                                                to={experiment.id.startsWith('custom_')
+                                                    ? `/experiment/custom/${experiment.id}`
+                                                    : `/experiment/${experiment.id}`}
                                                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold rounded-full shadow-md hover:shadow-lg transition-all"
                                             >
                                                 {getButtonText(experiment.id)}
