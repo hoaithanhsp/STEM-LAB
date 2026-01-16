@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Library from './pages/Library';
 import ExperimentDetail from './pages/ExperimentDetail';
+import CustomExperimentDetail from './pages/CustomExperimentDetail';
 import Profile from './pages/Profile';
 import CreateExperiment from './pages/CreateExperiment';
 
@@ -33,6 +34,7 @@ function AppRoutes() {
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/library" element={<PrivateRoute><Library /></PrivateRoute>} />
             <Route path="/experiment/:id" element={<PrivateRoute><ExperimentDetail /></PrivateRoute>} />
+            <Route path="/experiment/custom/:id" element={<PrivateRoute><CustomExperimentDetail /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/create" element={<PrivateRoute><CreateExperiment /></PrivateRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" />} />
