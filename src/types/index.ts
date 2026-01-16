@@ -34,6 +34,26 @@ export interface StudentProgress {
     end_time?: string;
 }
 
+// Custom experiment types (created by teachers via AI)
+export interface CustomExperiment {
+    id: string;
+    title: string;
+    subject: string;
+    difficulty_level: 'Dễ' | 'Trung bình' | 'Khó';
+    short_description: string;
+    learning_objectives: string[];
+    tools_instructions: string[];
+    simulation_config?: string;
+    estimated_time: number;
+    thumbnail_url?: string;
+    created_at: string;
+    created_by: string;
+    // Approval fields
+    status: 'pending' | 'approved';
+    approved_by?: string;
+    approved_at?: string;
+}
+
 // Lab report types
 export interface LabReport {
     id: string;
@@ -45,6 +65,11 @@ export interface LabReport {
     answers: Record<string, string>;
     created_at: string;
     saved_to_profile: boolean;
+    // Approval fields
+    status: 'pending' | 'approved' | 'rejected';
+    teacher_feedback?: string;
+    reviewed_by?: string;
+    reviewed_at?: string;
 }
 
 // Achievement types
