@@ -4,23 +4,56 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { mockExperiments } from '../data/mockData';
 import * as storage from '../services/storage';
+import { CustomExperiment, Experiment } from '../types';
 import Layout from '../components/Layout';
 import {
     Search, Filter, Clock, Users, Star, ArrowRight,
-    ChevronLeft, ChevronRight, X, Beaker
+    ChevronLeft, ChevronRight, X, Beaker, Check, AlertCircle
 } from 'lucide-react';
 
 export default function Library() {
     const { user } = useAuth();
+    const isAdmin = user?.role === 'admin';
     const [searchKeyword, setSearchKeyword] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [selectedDifficulty, setSelectedDifficulty] = useState('');
+    const [activeTab, setActiveTab] = useState<'library' | 'pending'>('library');
+    const [refreshKey, setRefreshKey] = useState(0);
 
-    // Get unique subjects
+    // Get approved custom experiments
+    const approvedCustomExperiments = useMemo(() => {
+        return storage.getApprovedCustomExperiments();
+    }, [refreshKey]);
+
+    // Get pending experiments for admin
+    const pendingExperiments = useMemo(() => {
+        if (!isAdmin) return [];
+        return storage.getPendingCustomExperiments();
+    }, [isAdmin, refreshKey]);
+
+    // Combine mock + approved custom experiments
+    const allExperiments = useMemo(() => {
+        const customAsExperiment: Experiment[] = approvedCustomExperiments.map(exp => ({
+            id: exp.id,
+            title: exp.title,
+            subject: exp.subject,
+            difficulty_level: exp.difficulty_level,
+            short_description: exp.short_description,
+            learning_objectives: exp.learning_objectives,
+            tools_instructions: exp.tools_instructions,
+            simulation_config: exp.simulation_config,
+            estimated_time: exp.estimated_time,
+            thumbnail_url: exp.thumbnail_url,
+            created_at: exp.created_at,
+        }));
+        return [...mockExperiments, ...customAsExperiment];
+    }, [approvedCustomExperiments]);
+
+    // Get unique subjects from all experiments
     const subjects = useMemo(() => {
-        const uniqueSubjects = [...new Set(mockExperiments.map(e => e.subject))];
+        const uniqueSubjects = [...new Set(allExperiments.map(e => e.subject))];
         return uniqueSubjects;
-    }, []);
+    }, [allExperiments]);
 
     // Get student progress
     const progressMap = useMemo(() => {
@@ -35,7 +68,7 @@ export default function Library() {
 
     // Filter experiments
     const filteredExperiments = useMemo(() => {
-        let filtered = mockExperiments;
+        let filtered = allExperiments;
 
         if (searchKeyword.trim()) {
             const keyword = searchKeyword.toLowerCase();
@@ -55,7 +88,14 @@ export default function Library() {
         }
 
         return filtered;
-    }, [searchKeyword, selectedSubject, selectedDifficulty]);
+    }, [searchKeyword, selectedSubject, selectedDifficulty, allExperiments]);
+
+    // Handle approve experiment
+    const handleApproveExperiment = (experimentId: string) => {
+        if (!user) return;
+        storage.approveCustomExperiment(experimentId, user.id);
+        setRefreshKey(prev => prev + 1);
+    };
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -299,8 +339,8 @@ export default function Library() {
                                             key={page}
                                             onClick={() => setCurrentPage(page)}
                                             className={`w-8 h-8 rounded-full text-sm font-medium transition-all ${currentPage === page
-                                                    ? 'bg-primary-500 text-white'
-                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                ? 'bg-primary-500 text-white'
+                                                : 'text-gray-600 hover:bg-gray-100'
                                                 }`}
                                         >
                                             {page}
